@@ -1,15 +1,17 @@
 use assert_cmd::prelude::*;
 use predicates::prelude::*;
 use std::process::Command;
+use std::env;
 
 const BIN_NAME: &str = "tonos-cli";
 
 #[test]
 fn test_config() -> Result<(), Box<dyn std::error::Error>> {
+    let node_address: &str = &env::var("TON_NETWORK_ADDRESS").unwrap_or("http://0.0.0.0".to_owned());
     let mut cmd = Command::cargo_bin(BIN_NAME)?;
     cmd.arg("config")
         .arg("--url")
-        .arg("http://0.0.0.0")
+        .arg(node_address)
         .arg("--retries")
         .arg("10")
         .arg("--timeout")
@@ -25,7 +27,7 @@ fn test_config() -> Result<(), Box<dyn std::error::Error>> {
         .arg("--list");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains(r#""url": "http://0.0.0.0""#))
+        .stdout(predicate::str::contains(format!(r#""url": "{}""#, node_address)))
         .stdout(predicate::str::contains(r#""retries": 10"#))
         .stdout(predicate::str::contains(r#""timeout": 25000"#))
         .stdout(predicate::str::contains(r#""wc": -2"#));

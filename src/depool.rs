@@ -403,8 +403,8 @@ fn exotic_stake_command(
     let tperiod = u32::from_str_radix(total_period.unwrap(), 10)
         .map_err(|e| format!("invalid total period: {}", e))
         .and_then(period_checker)?;
-    let wperiod = wperiod * 86400;
-    let tperiod = tperiod * 86400;
+    let wperiod = wperiod * 60;
+    let tperiod = tperiod * 60;
     add_exotic_stake(cmd, beneficiary.unwrap(), wperiod, tperiod, is_vesting)
 }
 

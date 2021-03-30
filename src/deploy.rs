@@ -13,6 +13,7 @@
 use crate::helpers::{create_client_verbose, create_client_local, load_abi, calc_acc_address};
 use crate::config::Config;
 use crate::crypto::load_keypair;
+use ton_client::crypto::KeyPair;
 use crate::call::{EncodedMessage, display_generated_message};
 use ton_client::processing::{ParamsOfProcessMessage};
 use ton_client::abi::{
@@ -24,7 +25,7 @@ pub async fn deploy_contract(
     tvc: &str,
     abi: &str,
     params: &str,
-    keys_file: &str,
+    keys_file: Option<String>,
     wc: i32
 ) -> Result<(), String> {
     let ton = create_client_verbose(&conf)?;
@@ -54,7 +55,8 @@ pub async fn generate_deploy_message(
     tvc: &str,
     abi: &str,
     params: &str,
-    keys_file: &str, wc: i32,
+    keys_file: Option<String>,
+    wc: i32,
     is_raw: bool,
     output: Option<&str>,
 ) -> Result<(), String> {
@@ -81,7 +83,7 @@ pub async fn prepare_deploy_message(
     tvc: &str,
     abi: &str,
     params: &str,
-    keys_file: &str,
+    keys_file: Option<String>,
     wc: i32
 ) -> Result<(ParamsOfEncodeMessage, String), String> {
 
@@ -89,7 +91,15 @@ pub async fn prepare_deploy_message(
         .map_err(|e| format!("failed to read ABI file: {}", e))?;
     let abi = load_abi(&abi)?;
 
-    let keys = load_keypair(keys_file)?;
+    let keys = load_keypair(&keys_file.unwrap_or_default());
+    // let keys = if keys.is_ok() {
+    //     keys.unwrap()
+    // } else {
+    //     KeyPair {
+    //         public: std::iter::repeat("0").take(64).collect::<String>(),
+    //         secret: "".to_owned(),
+    //     }
+    // };
 
     let tvc_bytes = &std::fs::read(tvc)
         .map_err(|e| format!("failed to read smart contract file: {}", e))?;
@@ -99,7 +109,12 @@ pub async fn prepare_deploy_message(
     let addr = calc_acc_address(
         &tvc_bytes,
         wc,
-        keys.public.clone(),
+        // keys.public.clone(),
+        if keys.is_ok() {
+                keys.clone().unwrap().public.clone()
+            } else {
+                std::iter::repeat("0").take(64).collect::<String>()
+            },
         None,
         abi.clone()
     ).await?;
@@ -117,7 +132,14 @@ pub async fn prepare_deploy_message(
         address: Some(addr.clone()),
         deploy_set: Some(dset),
         call_set: CallSet::some_with_function_and_input("constructor", params),
-        signer: Signer::Keys{ keys },
+        // signer: Signer::Keys{ keys },
+        signer: if keys.is_ok() {
+            Signer::Keys { keys: keys.unwrap() }
+        } else {
+            Signer::External {
+                public_key: std::iter::repeat("0").take(64).collect::<String>(),
+            }
+        },
         ..Default::default()
     }, addr))
 }

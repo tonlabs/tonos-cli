@@ -684,12 +684,9 @@ async fn deploy_command(matches: &ArgMatches<'_>, config: Config, deploy_type: D
             .or(config.abi_path.clone())
             .ok_or("ABI file not defined. Supply it in config file or command line.".to_string())?
     );
-    let keys = Some(
-        matches.value_of("SIGN")
+    let keys = matches.value_of("SIGN")
             .map(|s| s.to_string())
-            .or(config.keys_path.clone())
-            .ok_or("keypair file not defined. Supply it in config file or command line.".to_string())?
-    );
+            .or(config.keys_path.clone());
     let params = Some(load_params(params.unwrap())?);
     print_args!(matches, tvc, params, abi, keys, wc);
 
@@ -699,8 +696,8 @@ async fn deploy_command(matches: &ArgMatches<'_>, config: Config, deploy_type: D
         .unwrap_or(config.wc);
     
     match deploy_type {
-        DeployType::Full => deploy_contract(config, tvc.unwrap(), &abi.unwrap(), &params.unwrap(), &keys.unwrap(), wc).await,
-        DeployType::MsgOnly => generate_deploy_message(tvc.unwrap(), &abi.unwrap(), &params.unwrap(), &keys.unwrap(), wc, raw, output).await
+        DeployType::Full => deploy_contract(config, tvc.unwrap(), &abi.unwrap(), &params.unwrap(), keys, wc).await,
+        DeployType::MsgOnly => generate_deploy_message(tvc.unwrap(), &abi.unwrap(), &params.unwrap(), keys, wc, raw, output).await
     }
 }
 
